@@ -152,16 +152,27 @@ class ActSafe:
         )
         return np.asarray(actions)
 
-    def observe(self, trajectory: TrajectoryData) -> None:
-        add_to_buffer(
-            self.replay_buffer,
-            trajectory,
-            self.config.training.scale_reward,
-        )
-        self.state = jax.tree_map(lambda x: jnp.zeros_like(x), self.state)
+    def observe_transition(self, transition: Transition, infos: dict) -> None:
+        for i, info in enumerate(infos):
+            if transition.done[i]:
+                transition = Transition(
+                    transition.observation,
+                    info["final_observation"],
+                    transition.action,
+                    transition.reward,
+                    info["final_info"].get("cost", 0),
+                    transition.done,
+                )
+            add_to_buffer(
+                self.replay_buffer,
+                transition,
+                self.config.training.scale_reward,
+            )
 
-    def observe_transition(self, transition: Transition) -> None:
-        pass
+        def replace_where_done(state):
+            return jnp.where(transition.done, jnp.zeros_like(state), state)
+
+        self.state = jax.tree_map(replace_where_done, self.state)
 
     def update(self):
         total_steps = self.config.agent.update_steps
