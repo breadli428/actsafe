@@ -50,8 +50,10 @@ def interact(
         agent.observe_transition(transition, infos)
         observations = next_observations
         step += environment.action_repeat
-        track_rewards += rewards * (~done)
-        track_costs += costs * (~done)
+        track_rewards *= ~done
+        track_rewards += rewards
+        track_costs *= ~done
+        track_costs += costs
         pbar.set_postfix({"reward": track_rewards.mean(), "cost": track_costs.mean()})
         if render:
             render_episodes = max(render_episodes - done.any(), 0)
