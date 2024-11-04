@@ -49,7 +49,7 @@ def interact(
             trajectory.transitions.append(Transition(*map(lambda x: x[i], transition)))
         agent.observe_transition(transition, infos)
         observations = next_observations
-        step += environment.action_repeat
+        step += environment.action_repeat * environment.num_envs
         track_rewards *= ~done
         track_rewards += rewards
         track_costs *= ~done
