@@ -55,12 +55,12 @@ class ReplayBuffer:
         self.id = 0
 
     def add(self, transition: Transition):
-        capacity, max_length = self.reward.shape
+        capacity, max_length, _ = self.reward.shape
         batch_size = min(transition.observation.shape[0], capacity)
         # Discard data if batch size overflows capacity.
         end = min(self.episode_id + batch_size, capacity)
         episode_slice = slice(self.episode_id, end)
-        if transition.reward.ndim == 2:
+        if transition.reward.ndim == 1:
             transition = Transition(
                 transition.observation,
                 transition.next_observation,

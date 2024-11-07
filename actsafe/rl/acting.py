@@ -33,9 +33,6 @@ def interact(
         next_observations, rewards, terminal, truncated, infos = environment.step(
             actions
         )
-        next_observations, rewards, terminal, truncated, infos = environment.step(
-            actions
-        )
         costs = np.array(get_costs(infos))
         transition = Transition(
             observations,
