@@ -12,9 +12,8 @@ def interact(
     environment: EpisodicAsync,
     num_steps: int,
     train: bool,
-    step: int,
     render_episodes: int = 0,
-) -> tuple[list[Trajectory], int]:
+) -> list[Trajectory]:
     observations = environment.reset()
     episodes: list[Trajectory] = []
     trajectories = [Trajectory() for _ in range(environment.num_envs)]
@@ -34,6 +33,9 @@ def interact(
         next_observations, rewards, terminal, truncated, infos = environment.step(
             actions
         )
+        next_observations, rewards, terminal, truncated, infos = environment.step(
+            actions
+        )
         costs = np.array(get_costs(infos))
         transition = Transition(
             observations,
@@ -49,7 +51,6 @@ def interact(
             trajectory.transitions.append(Transition(*map(lambda x: x[i], transition)))
         agent.observe_transition(transition, infos)
         observations = next_observations
-        step += environment.action_repeat * environment.num_envs
         track_rewards *= ~done
         track_rewards += rewards
         track_costs *= ~done
@@ -61,7 +62,7 @@ def interact(
             if ep_done:
                 episodes.append(trajectory)
                 trajectories[i] = Trajectory()
-    return episodes, step
+    return episodes
 
 
 def get_costs(infos):
@@ -80,17 +81,15 @@ def epoch(
     env: EpisodicAsync,
     num_steps: int,
     train: bool,
-    step: int,
     render_episodes: int = 0,
-) -> tuple[EpochSummary, int]:
+) -> EpochSummary:
     summary = EpochSummary()
-    samples, step = interact(
+    samples = interact(
         agent,
         env,
         num_steps,
         train,
-        step,
         render_episodes,
     )
     summary.extend(samples)
-    return summary, step
+    return summary
