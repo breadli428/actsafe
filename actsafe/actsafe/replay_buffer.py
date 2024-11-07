@@ -125,7 +125,7 @@ class ReplayBuffer:
             ]
             o = self.observation[episode_ids[:, None], timestep_ids]
             o, next_o = o[:, :-1], o[:, 1:]
-            yield o, next_o, a, r, c
+            yield o, next_o, a, r, c, np.zeros_like(r), np.zeros_like(r)
 
     def sample(self, n_batches: int) -> Iterator[TrajectoryData]:
         if self.empty:
