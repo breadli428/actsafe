@@ -3,7 +3,7 @@ from tqdm import tqdm
 
 from actsafe.rl.episodic_async_env import EpisodicAsync
 from actsafe.rl.epoch_summary import EpochSummary
-from actsafe.rl.trajectory import Trajectory, Transition
+from actsafe.rl.trajectory import Trajectory, Transition, TrajectoryData
 from actsafe.rl.types import Agent
 
 
@@ -57,9 +57,26 @@ def interact(
             render_episodes = max(render_episodes - done.any(), 0)
         for i, (ep_done, trajectory) in enumerate(zip(done, trajectories)):
             if ep_done:
+                agent.observe(finalize_trajectory(trajectory, infos[i]), i)
                 episodes.append(trajectory)
                 trajectories[i] = Trajectory()
     return episodes
+
+
+def finalize_trajectory(trajectory: Trajectory, info: dict) -> TrajectoryData:
+    np_trajectory = trajectory.as_numpy()
+    next_obs = np_trajectory.next_observation.copy()
+    next_obs = info["final_observation"]
+    next_cost = info["final_info"].get("cost", 0)
+    return TrajectoryData(
+        np_trajectory.observation,
+        next_obs,
+        np_trajectory.action,
+        np_trajectory.reward,
+        next_cost,
+        np_trajectory.done,
+        np_trajectory.terminal,
+    )
 
 
 def get_costs(infos):

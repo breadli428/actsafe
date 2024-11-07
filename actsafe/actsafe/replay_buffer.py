@@ -3,7 +3,7 @@ import jax
 import numpy as np
 
 from actsafe.common.double_buffer import double_buffer
-from actsafe.rl.trajectory import TrajectoryData, Transition
+from actsafe.rl.trajectory import TrajectoryData
 
 
 class ReplayBuffer:
@@ -52,46 +52,34 @@ class ReplayBuffer:
         self.rs = np.random.RandomState(seed)
         self.batch_size = batch_size
         self.sequence_length = sequence_length
-        self.id = 0
 
-    def add(self, transition: Transition):
-        capacity, max_length, _ = self.reward.shape
-        batch_size = min(transition.observation.shape[0], capacity)
-        # Discard data if batch size overflows capacity.
-        end = min(self.episode_id + batch_size, capacity)
-        episode_slice = slice(self.episode_id, end)
-        if transition.reward.ndim == 1:
-            transition = Transition(
-                transition.observation,
-                transition.next_observation,
-                transition.action,
-                transition.reward[..., None],
-                transition.cost,
-                transition.done,
-                transition.terminal,
+    def add(self, trajectory: TrajectoryData):
+        capacity, *_ = self.reward.shape
+        if trajectory.reward.ndim == 2:
+            trajectory = TrajectoryData(
+                trajectory.observation,
+                trajectory.next_observation,
+                trajectory.action,
+                trajectory.reward[..., None],
+                trajectory.cost,
+                trajectory.done,
+                trajectory.terminal,
             )
         for data, val in zip(
             (self.action, self.reward, self.cost),
-            (
-                transition.action,
-                transition.reward,
-                transition.cost,
-            ),
+            (trajectory.action, trajectory.reward, trajectory.cost),
         ):
-            data[episode_slice, self.id] = val[:batch_size].astype(self.dtype)
-        self.observation[episode_slice, self.id] = transition.observation.astype(
-            self.obs_dtype
+            data[self.episode_id] = val.astype(self.dtype)
+        observation = np.concatenate(
+            [
+                trajectory.observation,
+                trajectory.next_observation,
+            ],
+            axis=1,
         )
-        if transition.terminal.any() or transition.done.any():
-            assert transition.done.all()
-            assert self.id + 1 == max_length
-            observation = transition.next_observation[:batch_size, -1:]
-            self.observation[episode_slice, self.id + 1] = observation.astype(
-                self.obs_dtype
-            )
-            self.episode_id = (self.episode_id + batch_size) % capacity
-            self._valid_episodes = min(self._valid_episodes + batch_size, capacity)
-        self.id = (self.id + 1) % max_length
+        self.observation[self.episode_id] = observation.astype(self.obs_dtype)
+        self.episode_id = (self.episode_id + 1) % capacity
+        self._valid_episodes = min(self._valid_episodes + 1, capacity)
 
     def _sample_batch(
         self,

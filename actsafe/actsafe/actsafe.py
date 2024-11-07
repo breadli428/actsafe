@@ -17,7 +17,7 @@ from actsafe.actsafe.sentiment import make_sentiment
 from actsafe.actsafe.world_model import WorldModel, evaluate_model, variational_step
 from actsafe.rl.epoch_summary import EpochSummary
 from actsafe.rl.metrics import MetricsMonitor
-from actsafe.rl.trajectory import TrajectoryData, Transition
+from actsafe.rl.trajectory import TrajectoryData
 from actsafe.rl.types import FloatArray, Report
 from actsafe.rl.utils import Count, PRNGSequence, Until, add_to_buffer
 
@@ -152,30 +152,17 @@ class ActSafe:
         )
         return np.asarray(actions)
 
-    def observe_transition(self, transition: Transition, infos: dict) -> None:
-        for i, info in enumerate(infos):
-            if transition.done[i]:
-                next_obs = transition.next_observation.copy()
-                next_obs[i] = info["final_observation"]
-                next_cost = transition.cost.copy()
-                next_cost[i] = info["final_info"].get("cost", 0)
-                transition = Transition(
-                    transition.observation,
-                    next_obs,
-                    transition.action,
-                    transition.reward,
-                    next_cost,
-                    transition.done,
-                    transition.terminal,
-                )
+    def observe(self, trajectory: TrajectoryData, idx: int) -> None:
         add_to_buffer(
             self.replay_buffer,
-            transition,
+            trajectory,
             self.config.training.scale_reward,
         )
+        done = jnp.zeros_like(trajectory.reward)
+        done = done.at[idx].set(1)
 
         def replace_where_done(state):
-            return jnp.where(transition.done[:, None], jnp.zeros_like(state), state)
+            return jnp.where(done[:, None], jnp.zeros_like(state), state)
 
         self.state = jax.tree_map(replace_where_done, self.state)
 
