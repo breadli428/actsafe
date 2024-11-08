@@ -1,4 +1,4 @@
-from typing import NamedTuple
+from typing import Any, NamedTuple
 
 import equinox as eqx
 import jax
@@ -17,7 +17,7 @@ from actsafe.actsafe.sentiment import make_sentiment
 from actsafe.actsafe.world_model import WorldModel, evaluate_model, variational_step
 from actsafe.rl.epoch_summary import EpochSummary
 from actsafe.rl.metrics import MetricsMonitor
-from actsafe.rl.trajectory import TrajectoryData
+from actsafe.rl.trajectory import TrajectoryData, Transition
 from actsafe.rl.types import FloatArray, Report
 from actsafe.rl.utils import Count, PRNGSequence, Until, add_to_buffer
 
@@ -151,6 +151,9 @@ class ActSafe:
             next(self.prng),
         )
         return np.asarray(actions)
+
+    def observe_transition(self, transition: Transition, info: Any) -> None:
+        pass
 
     def observe(self, trajectory: TrajectoryData, idx: int) -> None:
         add_to_buffer(
