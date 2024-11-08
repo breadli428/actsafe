@@ -19,6 +19,7 @@ def interact(
     trajectories = [Trajectory() for _ in range(environment.num_envs)]
     track_rewards = np.zeros(environment.num_envs)
     track_costs = np.zeros(environment.num_envs)
+    assert num_steps % (environment.action_repeat * environment.num_envs) == 0
     pbar = tqdm(
         range(0, num_steps, environment.action_repeat * environment.num_envs),
         unit=f"Steps (✕ {environment.num_envs} parallel)",
@@ -66,14 +67,13 @@ def interact(
 def finalize_trajectory(trajectory: Trajectory, info: dict) -> TrajectoryData:
     np_trajectory = trajectory.as_numpy()
     next_obs = np_trajectory.next_observation.copy()
-    next_obs = info["final_observation"]
-    next_cost = info["final_info"].get("cost", 0)
+    next_obs[-1] = info["final_observation"]
     return TrajectoryData(
         np_trajectory.observation,
         next_obs,
         np_trajectory.action,
         np_trajectory.reward,
-        next_cost,
+        np_trajectory.cost,
         np_trajectory.done,
         np_trajectory.terminal,
     )

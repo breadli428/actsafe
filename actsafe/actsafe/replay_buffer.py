@@ -55,7 +55,7 @@ class ReplayBuffer:
 
     def add(self, trajectory: TrajectoryData):
         capacity, *_ = self.reward.shape
-        if trajectory.reward.ndim == 2:
+        if trajectory.reward.ndim == 1:
             trajectory = TrajectoryData(
                 trajectory.observation,
                 trajectory.next_observation,
@@ -73,9 +73,9 @@ class ReplayBuffer:
         observation = np.concatenate(
             [
                 trajectory.observation,
-                trajectory.next_observation,
+                trajectory.next_observation[-1:],
             ],
-            axis=1,
+            axis=0,
         )
         self.observation[self.episode_id] = observation.astype(self.obs_dtype)
         self.episode_id = (self.episode_id + 1) % capacity
