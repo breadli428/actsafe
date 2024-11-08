@@ -23,7 +23,9 @@ class PRNGSequence:
 
 
 def add_to_buffer(buffer, trajectory, reward_scale):
-    buffer.add(
+    # FIXME (yarden)
+    # buffer.add(...)
+    buffer.add_batch(
         TrajectoryData(
             trajectory.observation,
             trajectory.next_observation,

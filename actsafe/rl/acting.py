@@ -17,6 +17,7 @@ def interact(
     observations = environment.reset()
     episodes: list[Trajectory] = []
     trajectories = [Trajectory() for _ in range(environment.num_envs)]
+    batch = Trajectory()
     track_rewards = np.zeros(environment.num_envs)
     track_costs = np.zeros(environment.num_envs)
     assert num_steps % (environment.action_repeat * environment.num_envs) == 0
@@ -44,6 +45,7 @@ def interact(
             truncated,
             terminal,
         )
+        batch.transitions.append(transition)
         done = terminal | truncated
         for i, trajectory in enumerate(trajectories):
             trajectory.transitions.append(Transition(*map(lambda x: x[i], transition)))
@@ -58,16 +60,20 @@ def interact(
             render_episodes = max(render_episodes - done.any(), 0)
         for i, (ep_done, trajectory) in enumerate(zip(done, trajectories)):
             if ep_done:
-                agent.observe(finalize_trajectory(trajectory, infos[i]), i)
+                # agent.observe(finalize_trajectory(trajectory, infos[i]), i)
                 episodes.append(trajectory)
                 trajectories[i] = Trajectory()
+        if done.any():
+            assert done.all()
+            agent.observe(finalize_trajectory(batch, infos[0]), 0)
     return episodes
 
 
 def finalize_trajectory(trajectory: Trajectory, info: dict) -> TrajectoryData:
     np_trajectory = trajectory.as_numpy()
     next_obs = np_trajectory.next_observation.copy()
-    next_obs[-1] = info["final_observation"]
+    # next_obs[-1] = info["final_observation"]
+    next_obs[:, -1] = info["final_observation"]
     return TrajectoryData(
         np_trajectory.observation,
         next_obs,

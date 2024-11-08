@@ -53,6 +53,38 @@ class ReplayBuffer:
         self.batch_size = batch_size
         self.sequence_length = sequence_length
 
+    def add_batch(self, trajectory: TrajectoryData):
+        capacity, *_ = self.reward.shape
+        batch_size = min(trajectory.observation.shape[0], capacity)
+        # Discard data if batch size overflows capacity.
+        end = min(self.episode_id + batch_size, capacity)
+        episode_slice = slice(self.episode_id, end)
+        if trajectory.reward.ndim == 2:
+            trajectory = TrajectoryData(
+                trajectory.observation,
+                trajectory.next_observation,
+                trajectory.action,
+                trajectory.reward[..., None],
+                trajectory.cost,
+                trajectory.done,
+                trajectory.terminal,
+            )
+        for data, val in zip(
+            (self.action, self.reward, self.cost),
+            (trajectory.action, trajectory.reward, trajectory.cost),
+        ):
+            data[episode_slice] = val[:batch_size].astype(self.dtype)
+        observation = np.concatenate(
+            [
+                trajectory.observation[:batch_size],
+                trajectory.next_observation[:batch_size, -1:],
+            ],
+            axis=1,
+        )
+        self.observation[episode_slice] = observation.astype(self.obs_dtype)
+        self.episode_id = (self.episode_id + batch_size) % capacity
+        self._valid_episodes = min(self._valid_episodes + batch_size, capacity)
+
     def add(self, trajectory: TrajectoryData):
         capacity, *_ = self.reward.shape
         if trajectory.reward.ndim == 1:
