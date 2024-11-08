@@ -66,6 +66,7 @@ def interact(
         if done.any():
             assert done.all()
             agent.observe(finalize_trajectory(batch, infos[0]), 0)
+            batch = Trajectory()
     return episodes
 
 
@@ -73,6 +74,7 @@ def finalize_trajectory(trajectory: Trajectory, info: dict) -> TrajectoryData:
     np_trajectory = trajectory.as_numpy()
     next_obs = np_trajectory.next_observation.copy()
     # next_obs[-1] = info["final_observation"]
+    # FIXME (yarden): should also get the cost from info["final_info"]
     next_obs[:, -1] = info["final_observation"]
     return TrajectoryData(
         np_trajectory.observation,
