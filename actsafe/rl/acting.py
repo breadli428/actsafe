@@ -61,6 +61,9 @@ def interact(
                 agent.observe(finalize_trajectory(trajectory, infos[i]), i)
                 episodes.append(trajectory)
                 trajectories[i] = Trajectory()
+        if done.any():
+            assert done.all()
+            environment.reset()
     return episodes
 
 
