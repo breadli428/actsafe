@@ -161,10 +161,8 @@ class ActSafe:
             trajectory,
             self.config.training.scale_reward,
         )
-        done = jnp.ones(self.config.training.parallel_envs)
-        # FIXME (yarden): fix.
-        # done = jnp.zeros(self.config.training.parallel_envs, dtype=bool)
-        # done = done.at[idx].set(1)
+        done = jnp.zeros(self.config.training.parallel_envs, dtype=bool)
+        done = done.at[idx].set(1)
 
         def replace_where_done(state):
             return jnp.where(done[:, None], jnp.zeros_like(state), state)

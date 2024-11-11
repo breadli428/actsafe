@@ -23,8 +23,7 @@ class PRNGSequence:
 
 
 def add_to_buffer(buffer, trajectory, reward_scale):
-    # FIXME (yarden)
-    # buffer.add(...)
+    trajectory = jax.tree.map(lambda x: x[None,], trajectory)
     buffer.add_batch(
         TrajectoryData(
             trajectory.observation,
