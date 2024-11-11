@@ -56,14 +56,14 @@ def interact(
         pbar.set_postfix({"reward": track_rewards.mean(), "cost": track_costs.mean()})
         if render:
             render_episodes = max(render_episodes - done.any(), 0)
-        for i, (ep_done, trajectory) in enumerate(zip(done, trajectories)):
+        for i, (ep_done, trajectory, info) in enumerate(zip(done, trajectories, infos)):
             if ep_done:
-                agent.observe(finalize_trajectory(trajectory, infos[i]), i)
+                agent.observe(finalize_trajectory(trajectory, info), i)
                 episodes.append(trajectory)
                 trajectories[i] = Trajectory()
         if done.any():
             assert done.all()
-            environment.reset()
+            # environment.reset()
     return episodes
 
 
@@ -71,6 +71,7 @@ def finalize_trajectory(trajectory: Trajectory, info: dict) -> TrajectoryData:
     np_trajectory = trajectory.as_numpy()
     next_obs = np_trajectory.next_observation.copy()
     next_obs[-1] = info.get("final_observation", next_obs[-1])
+    # FIXME (yarden): add cost
     return TrajectoryData(
         np_trajectory.observation,
         next_obs,
