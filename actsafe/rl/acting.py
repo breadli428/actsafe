@@ -63,7 +63,6 @@ def interact(
                 trajectories[i] = Trajectory()
         if done.any():
             assert done.all()
-            # environment.reset()
     return episodes
 
 
