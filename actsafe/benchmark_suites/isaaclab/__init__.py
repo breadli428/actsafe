@@ -46,10 +46,10 @@ def make(cfg: DictConfig) -> EnvironmentFactory:
         )
 
         env_cfg = AnymalDFlatEnvCfg()
+        env_cfg.scene.num_envs = cfg.training.parallel_envs
+        env_cfg.episode_length_s = cfg.training.time_limit
         env = gym.make(args_cli.task, cfg=env_cfg, render_mode=None)
         env = ActSafeEnvWrapper(env)
-        cfg.training.parallel_envs = env.num_envs
-        cfg.training.steps_per_epoch = max(env.max_episode_length * env.num_envs, cfg.training.steps_per_epoch)
         return env
 
     return make_env

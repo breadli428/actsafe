@@ -4,6 +4,9 @@ defaults:
 
 training:
   async_parallel: false
+  parallel_envs: 4096
+  steps_per_epoch: 409600
+  time_limit: 100
 
 agent:
   train_every: 4096

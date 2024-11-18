@@ -95,22 +95,26 @@ class ReplayBuffer:
         self._valid_episodes = min(self._valid_episodes + batch_size, capacity)
 
     def _sample_batch_idx(self, batch_size, sequence_length):
-        time_limit = self.observation.shape[1]
-        first_terminal = self.terminal.argmax(axis=1)
-        max_length = np.where(first_terminal == 0, time_limit, first_terminal)
-        valid_episodes_lengths = max_length[: self._valid_episodes]
-        valid_episodes = np.where(valid_episodes_lengths >= sequence_length)[0]
+        valid_episodes, valid_episodes_lengths = self._get_valid_episodes()
         timesteps = []
         episodes = []
         for _ in range(batch_size):
             episode_id = self.rs.choice(valid_episodes)
             episodes.append(episode_id)
             low = self.rs.randint(
-                valid_episodes_lengths[episode_id] - sequence_length - 1
+                valid_episodes_lengths[episode_id] - sequence_length
             )
             timestep_ids = low + np.arange(sequence_length + 1)
             timesteps.append(timestep_ids)
         return np.asarray(episodes), np.asarray(timesteps)
+
+    def _get_valid_episodes(self):
+        time_limit = self.observation.shape[1]
+        first_terminal = self.terminal.argmax(axis=1)
+        max_length = np.where(first_terminal == 0, time_limit, first_terminal)
+        valid_episodes_lengths = max_length[: self._valid_episodes]
+        valid_episodes = np.where(valid_episodes_lengths >= self.sequence_length + 1)[0]
+        return valid_episodes, valid_episodes_lengths
 
     def _sample_batch(
         self,
@@ -149,4 +153,7 @@ class ReplayBuffer:
 
     @property
     def empty(self):
-        return self._valid_episodes == 0
+        if self._valid_episodes != 0:
+            valid_episodes, _ = self._get_valid_episodes()
+            return len(valid_episodes) == 0
+        return True
