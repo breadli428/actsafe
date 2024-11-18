@@ -24,7 +24,7 @@ class ReplayBuffer:
         self.observation = np.zeros(
             (
                 capacity,
-                max_length + 1,
+                max_length,
             )
             + observation_shape,
             dtype=self.obs_dtype,
@@ -74,44 +74,11 @@ class ReplayBuffer:
             (trajectory.action, trajectory.reward, trajectory.cost),
         ):
             data[episode_slice] = val[:batch_size].astype(self.dtype)
-        observation = np.concatenate(
-            [
-                trajectory.observation[:batch_size],
-                trajectory.next_observation[:batch_size, -1:],
-            ],
-            axis=1,
+        self.observation[episode_slice] = trajectory.observation[:batch_size].astype(
+            self.obs_dtype
         )
-        self.observation[episode_slice] = observation.astype(self.obs_dtype)
         self.episode_id = (self.episode_id + batch_size) % capacity
         self._valid_episodes = min(self._valid_episodes + batch_size, capacity)
-
-    def add(self, trajectory: TrajectoryData):
-        capacity, *_ = self.reward.shape
-        if trajectory.reward.ndim == 1:
-            trajectory = TrajectoryData(
-                trajectory.observation,
-                trajectory.next_observation,
-                trajectory.action,
-                trajectory.reward[..., None],
-                trajectory.cost,
-                trajectory.done,
-                trajectory.terminal,
-            )
-        for data, val in zip(
-            (self.action, self.reward, self.cost),
-            (trajectory.action, trajectory.reward, trajectory.cost),
-        ):
-            data[self.episode_id] = val.astype(self.dtype)
-        observation = np.concatenate(
-            [
-                trajectory.observation,
-                trajectory.next_observation[-1:],
-            ],
-            axis=0,
-        )
-        self.observation[self.episode_id] = observation.astype(self.obs_dtype)
-        self.episode_id = (self.episode_id + 1) % capacity
-        self._valid_episodes = min(self._valid_episodes + 1, capacity)
 
     def _sample_batch(
         self,

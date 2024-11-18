@@ -68,15 +68,14 @@ def interact(
 
 def finalize_trajectory(trajectory: Trajectory, info: dict) -> TrajectoryData:
     np_trajectory = trajectory.as_numpy()
-    next_obs = np_trajectory.next_observation.copy()
-    next_obs[-1] = info.get("final_observation", next_obs[-1])
-    # FIXME (yarden): add cost
+    cost = np_trajectory.cost.copy()
+    cost[-1] = info.get("final_info", {}).get("cost", 0.0)
     return TrajectoryData(
         np_trajectory.observation,
-        next_obs,
+        np_trajectory.next_observation,
         np_trajectory.action,
         np_trajectory.reward,
-        np_trajectory.cost,
+        cost,
         np_trajectory.done,
         np_trajectory.terminal,
     )
