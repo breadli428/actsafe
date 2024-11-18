@@ -8,7 +8,7 @@ from actsafe.rl.types import EnvironmentFactory
 def make(cfg: DictConfig) -> EnvironmentFactory:
     import argparse
     from omni.isaac.lab.app import AppLauncher
-    
+
     # add argparse arguments
     parser = argparse.ArgumentParser()
     # append AppLauncher cli args
@@ -22,10 +22,11 @@ def make(cfg: DictConfig) -> EnvironmentFactory:
 
     # launch omniverse app
     app_launcher = AppLauncher(args_cli)
-    simulation_app = app_launcher.app
+    app_launcher.app
 
     import torch
     from omni.isaac.lab_tasks.manager_based.locomotion.velocity.config.anymal_d.flat_env_cfg import AnymalDFlatEnvCfg
+    from actsafe.benchmark_suites.isaaclab.actsafe_env import ActSafeEnvWrapper
 
     torch.backends.cuda.matmul.allow_tf32 = True
     torch.backends.cudnn.allow_tf32 = True
@@ -35,8 +36,20 @@ def make(cfg: DictConfig) -> EnvironmentFactory:
     def make_env():
         import gymnasium as gym
 
+        gym.register(
+            id="Isaac-Velocity-Flat-Anymal-D-Actsafe-v0",
+            entry_point="actsafe.benchmark_suites.isaaclab.actsafe_env:ManagerBasedActSafeEnv",
+            disable_env_checker=True,
+            kwargs={
+                "env_cfg_entry_point": AnymalDFlatEnvCfg,
+            },
+        )
+
         env_cfg = AnymalDFlatEnvCfg()
         env = gym.make(args_cli.task, cfg=env_cfg, render_mode=None)
+        env = ActSafeEnvWrapper(env)
+        cfg.training.parallel_envs = env.num_envs
+        cfg.training.steps_per_epoch = max(env.max_episode_length * env.num_envs, cfg.training.steps_per_epoch)
         return env
 
     return make_env

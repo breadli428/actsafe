@@ -85,8 +85,10 @@ class ReplayBuffer:
                 trajectory.terminal,
             ),
         ):
-            data[episode_slice] = val[:batch_size].astype(self.dtype)
-        self.observation[episode_slice] = trajectory.observation[:batch_size].astype(
+            episode_length = val.shape[1]
+            data[episode_slice, :episode_length] = val[:batch_size].astype(self.dtype)
+        episode_length = trajectory.observation.shape[1]
+        self.observation[episode_slice, :episode_length] = trajectory.observation[:batch_size].astype(
             self.obs_dtype
         )
         self.episode_id = (self.episode_id + batch_size) % capacity
