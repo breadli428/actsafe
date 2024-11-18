@@ -35,6 +35,11 @@ def make(cfg: DictConfig) -> EnvironmentFactory:
 
     def make_env():
         import gymnasium as gym
+        from gymnasium.wrappers.clip_action import ClipAction
+        from gymnasium.wrappers.rescale_action import RescaleAction
+        from gymnasium.spaces import Box
+        import numpy as np
+
 
         gym.register(
             id="Isaac-Velocity-Flat-Anymal-D-Actsafe-v0",
@@ -50,6 +55,9 @@ def make(cfg: DictConfig) -> EnvironmentFactory:
         env_cfg.episode_length_s = cfg.training.time_limit
         env = gym.make(args_cli.task, cfg=env_cfg, render_mode=None)
         env = ActSafeEnvWrapper(env)
+        env = RescaleAction(env, -1.0, 1.0)  # type: ignore
+        env.action_space = Box(-1.0, 1.0, env.action_space.shape, np.float32)
+        env = ClipAction(env)  # type: ignore
         return env
 
     return make_env

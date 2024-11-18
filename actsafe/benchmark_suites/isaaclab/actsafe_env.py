@@ -68,8 +68,10 @@ class ActSafeEnvWrapper:
 
     def __init__(self, env: ManagerBasedActSafeEnv):
         self.env = env
+        # FIXME (yarden): should have low and high values
+        self._action_space = Box([-np.pi, -np.pi, -2* np.pi], [np.pi, np.pi], env.single_action_space.shape, env.single_action_space.dtype)
 
-    def reset(self, seed=None):
+    def reset(self, *, seed=None, options=None):
         obs, _ = self.env.reset(seed=seed)
         return obs["policy"].cpu().numpy()
 
@@ -114,6 +116,7 @@ class ActSafeEnvWrapper:
 
     @property
     def action_space(self) -> Box:
+        # FIXME (yarden): should have low and high values
         return self.env.single_action_space
 
     @property
