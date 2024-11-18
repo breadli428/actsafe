@@ -2,7 +2,7 @@ import jax
 import jax.numpy as jnp
 import equinox as eqx
 
-from actsafe.rl.trajectory import Transition
+from actsafe.rl.trajectory import TrajectoryData
 
 
 class PRNGSequence:

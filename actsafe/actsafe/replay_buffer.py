@@ -1,4 +1,4 @@
-from typing import Iterator, Dict
+from typing import Iterator
 import jax
 import numpy as np
 
@@ -21,12 +21,6 @@ class ReplayBuffer:
         self.episode_id = 0
         self.dtype = np.float32
         self.obs_dtype = np.uint8
-        self.max_length = max_length
-        self.observation_shape = observation_shape
-        self.action_shape = action_shape
-        self.num_rewards = num_rewards
-
-        # Main storage arrays
         self.observation = np.zeros(
             (
                 capacity,
@@ -36,7 +30,11 @@ class ReplayBuffer:
             dtype=self.obs_dtype,
         )
         self.action = np.zeros(
-            (capacity, max_length) + action_shape,
+            (
+                capacity,
+                max_length,
+            )
+            + action_shape,
             dtype=self.dtype,
         )
         self.reward = np.zeros(
@@ -44,18 +42,12 @@ class ReplayBuffer:
             dtype=self.dtype,
         )
         self.cost = np.zeros(
-            (capacity, max_length),
+            (
+                capacity,
+                max_length,
+            ),
             dtype=self.dtype,
         )
-        self.terminated = np.ones(
-            (capacity, max_length),
-            dtype=bool,
-        )
-        self.episode_lengths = np.zeros(capacity, dtype=np.int32)
-
-        # Tracking ongoing episodes
-        self.ongoing_episodes: Dict[int, Dict] = {}
-
         self._valid_episodes = 0
         self.rs = np.random.RandomState(seed)
         self.batch_size = batch_size
@@ -98,33 +90,25 @@ class ReplayBuffer:
             valid_episodes = valid_episodes
         else:
             valid_episodes = self._valid_episodes
-
+        time_limit = self.observation.shape[1]
+        assert time_limit > sequence_length
         while True:
-            episode_ids = self.rs.choice(valid_episodes, size=batch_size)
-            low = np.array(
-                [
-                    self.rs.randint(
-                        0, max(1, self.episode_lengths[episode_id] - sequence_length)
-                    )
-                    for episode_id in episode_ids
-                ]
-            )
+            low = self.rs.choice(time_limit - sequence_length - 1, batch_size)
             timestep_ids = low[:, None] + np.tile(
                 np.arange(sequence_length + 1),
                 (batch_size, 1),
             )
-            for i, (episode_id, time_steps) in enumerate(
-                zip(episode_ids, timestep_ids)
-            ):
-                episode_length = self.episode_lengths[episode_id]
-                if time_steps[-1] >= episode_length:
-                    # Adjust timesteps to end at episode termination
-                    offset = time_steps[-1] - episode_length + 1
-                    timestep_ids[i] -= offset
-
+            episode_ids = self.rs.choice(valid_episodes, size=batch_size)
+            # Sample a sequence of length H for the actions, rewards and costs,
+            # and a length of H + 1 for the observations (which is needed for
+            # bootstrapping)
             a, r, c = [
                 x[episode_ids[:, None], timestep_ids[:, :-1]]
-                for x in (self.action, self.reward, self.cost)
+                for x in (
+                    self.action,
+                    self.reward,
+                    self.cost,
+                )
             ]
             o = self.observation[episode_ids[:, None], timestep_ids]
             o, next_o = o[:, :-1], o[:, 1:]
@@ -136,7 +120,7 @@ class ReplayBuffer:
         iterator = (
             TrajectoryData(
                 *next(self._sample_batch(self.batch_size, self.sequence_length))
-            )
+            )  # type: ignore
             for _ in range(n_batches)
         )
         if jax.default_backend() == "gpu":

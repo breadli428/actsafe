@@ -11,10 +11,8 @@ def interact(
     agent: Agent,
     environment: EpisodicAsync,
     num_steps: int,
-    num_steps: int,
     train: bool,
     render_episodes: int = 0,
-) -> list[Trajectory]:
 ) -> list[Trajectory]:
     observations = environment.reset()
     episodes: list[Trajectory] = []
